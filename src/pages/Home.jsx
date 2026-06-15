@@ -158,7 +158,7 @@ export default function Home() {
         <div className={styles.footerInner}>
           <span className="neon-cyan">🕹️ RETRO ARCADE HUB</span>
           <span className={styles.footerText}>8 GAMES • BUILT WITH REACT • PIXEL PERFECT</span>
-          <span className="neon-magenta">© 2025</span>
+          <span className="neon-magenta">© 2026</span>
         </div>
       </footer>
     </div>

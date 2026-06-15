@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ls } from '../utils/storage'
 
 const COLS = 20, ROWS = 20, CELL = 20
-const DIR = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0], w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] }
-
+const DIR = { ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1}, ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0}, w:{x:0,y:-1}, s:{x:0,y:1}, a:{x:-1,y:0}, d:{x:1,y:0} }
 function randFood(snake) {
   let p
   do { p = { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) } }
@@ -16,11 +15,9 @@ export default function Snake() {
   const navigate = useNavigate()
   const [snake, setSnake] = useState([{x:10,y:10},{x:9,y:10},{x:8,y:10}])
   const [food, setFood] = useState({x:5,y:5})
-  const [dir, setDir] = useState({x:1,y:0})
   const [phase, setPhase] = useState('idle') // idle, playing, paused, over
   const [score, setScore] = useState(0)
   const [bestScore, setBestScore] = useState(ls.get('snake_best', 0))
-  const [speed, setSpeed] = useState(150)
   const stateRef = useRef({ snake:[{x:10,y:10},{x:9,y:10},{x:8,y:10}], dir:{x:1,y:0}, food:{x:5,y:5}, score:0, speed:150 })
   const loopRef = useRef(null)
   const phaseRef = useRef('idle')
@@ -28,19 +25,16 @@ export default function Snake() {
   const resetGame = () => {
     const s = [{x:10,y:10},{x:9,y:10},{x:8,y:10}]
     const f = randFood(s)
-    const d = {x:1,y:0}
-    stateRef.current = { snake:s, dir:d, food:f, score:0, speed:150 }
-    setSnake(s); setFood(f); setDir(d); setScore(0); setSpeed(150)
+    stateRef.current = { snake:s, dir:{x:1,y:0}, food:f, score:0, speed:150 }
+    setSnake(s); setFood(f); setScore(0)
   }
 
   const tick = useCallback(() => {
     const { snake, dir, food, speed } = stateRef.current
     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
-    // wall collision
     if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
       phaseRef.current = 'over'; setPhase('over'); return
     }
-    // self collision
     if (snake.some(s => s.x===head.x && s.y===head.y)) {
       phaseRef.current = 'over'; setPhase('over'); return
     }
@@ -52,17 +46,21 @@ export default function Snake() {
     stateRef.current = { snake:newSnake, dir, food:newFood, score:newScore, speed:newSpeed }
     setSnake([...newSnake]); setFood({...newFood}); setScore(newScore)
     if (ateFood) {
-      setSpeed(newSpeed)
       if (newScore > ls.get('snake_best', 0)) { setBestScore(newScore); ls.set('snake_best', newScore) }
     }
   }, [])
 
   useEffect(() => {
-    if (phase !== 'playing') { clearInterval(loopRef.current); return }
-    clearInterval(loopRef.current)
-    loopRef.current = setInterval(tick, stateRef.current.speed)
-    return () => clearInterval(loopRef.current)
-  }, [phase, speed, tick])
+    if (phase !== 'playing') return
+    let alive = true
+    const loop = () => {
+      if (!alive || phaseRef.current !== 'playing') return
+      tick()
+      setTimeout(loop, stateRef.current.speed)
+    }
+    setTimeout(loop, stateRef.current.speed)
+    return () => { alive = false }
+  }, [phase, tick])
 
   useEffect(() => {
     const handler = (e) => {
@@ -71,7 +69,7 @@ export default function Snake() {
         const nd = DIR[e.key]
         const cur = stateRef.current.dir
         if (nd.x !== -cur.x || nd.y !== -cur.y) {
-          stateRef.current.dir = nd; setDir(nd)
+          stateRef.current.dir = nd   // ← just write to ref, no setDir
         }
       }
       if (e.key === ' ') {
@@ -89,7 +87,7 @@ export default function Snake() {
     const nd = DIR[key]
     if (nd) {
       const cur = stateRef.current.dir
-      if (nd.x !== -cur.x || nd.y !== -cur.y) { stateRef.current.dir = nd; setDir(nd) }
+      if (nd.x !== -cur.x || nd.y !== -cur.y) { stateRef.current.dir = nd; }
     }
   }
 
